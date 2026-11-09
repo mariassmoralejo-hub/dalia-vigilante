@@ -1,0 +1,25 @@
+# Opcion A (gratuita): ejecucion programada en la nube con GitHub Actions. Copiar a .github/workflows/vigilante.yml
+# de un repositorio PUBLICO que solo contenga vigilante_emergencias.py (sin credenciales; estas van en Settings > Secrets).
+# Limitaciones: intervalo minimo 5 min, ejecuciones "best effort" (pueden retrasarse), se desactiva tras 60 dias sin actividad del repo.
+name: vigilante-dalia
+on:
+  # schedule: [{cron: "*/5 * * * *"}]   # DESACTIVADO hasta tener la alarma de latido; descomentar entonces
+  workflow_dispatch:
+jobs:
+  vigilar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 vigilante_emergencias.py --env ${{ vars.DALIA_ENV || 'test' }}
+        env:
+          VIG_HOST: ${{ secrets.VIG_HOST }}
+          VIG_USER: ${{ secrets.VIG_USER }}
+          VIG_PASSWORD: ${{ secrets.VIG_PASSWORD }}
+          VIG_ESQUEMA: ${{ vars.VIG_ESQUEMA }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+          TELNYX_ALERT_KEY: ${{ secrets.TELNYX_ALERT_KEY }}
+          TELNYX_ALERT_FROM: ${{ secrets.TELNYX_ALERT_FROM }}
+          TELNYX_ALERT_PROFILE: ${{ secrets.TELNYX_ALERT_PROFILE }}
+          HC_PING_URL: ${{ secrets.HC_PING_URL }}
