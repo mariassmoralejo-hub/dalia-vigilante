@@ -3,7 +3,7 @@
 # Limitaciones: intervalo minimo 5 min, ejecuciones "best effort" (pueden retrasarse), se desactiva tras 60 dias sin actividad del repo.
 name: vigilante-dalia
 on:
-  schedule: [{cron: "7,37 * * * *"}]   # cada 30 min (minutos 7 y 37: evita la hora en punto, de maxima carga en GitHub)
+  schedule: [{cron: "7 * * * *"}]   # cada 60 min, SOLO TEST (minuto 7: evita la hora en punto). En PROD se decidira una vigilancia mas rapida
   workflow_dispatch:
 jobs:
   vigilar:
