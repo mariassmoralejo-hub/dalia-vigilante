@@ -3,12 +3,13 @@
 # Limitaciones: intervalo minimo 5 min, ejecuciones "best effort" (pueden retrasarse), se desactiva tras 60 dias sin actividad del repo.
 name: vigilante-dalia
 on:
-  # schedule: [{cron: "*/5 * * * *"}]   # DESACTIVADO hasta tener la alarma de latido; descomentar entonces
+  schedule: [{cron: "7,37 * * * *"}]   # cada 30 min (minutos 7 y 37: evita la hora en punto, de maxima carga en GitHub)
   workflow_dispatch:
 jobs:
   vigilar:
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    concurrency: {group: vigilante-dalia, cancel-in-progress: false}
     steps:
       - uses: actions/checkout@v4
       - run: python3 vigilante_emergencias.py --env ${{ vars.DALIA_ENV || 'test' }}
