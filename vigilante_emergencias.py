@@ -156,6 +156,33 @@ def main():
     print("pendientes:", len(pend), "marcados:", len(ok_ids))
 
 
+def cuota():
+    """Vigila la cuota mensual de ejecuciones de n8n con lo que cuenta el filtro de borde (estimacion: solo lo reenviado + fijos).
+    Sin estado: avisa como maximo una vez al dia (primer pase de las 07 UTC) si supera el 70 % (correo) o el 90 % (correo + SMS)."""
+    try:
+        r = sql("select %s.borde_cuota_lab() as r" % ESQ)[0]["r"]
+    except Exception as e:
+        err("cuota", e)
+        return
+    limite = int(os.environ.get("N8N_CUOTA_MENSUAL", "2500"))
+    fijo = int(os.environ.get("N8N_FIJO_MENSUAL", "110"))  # coordinador, enlaces y errores que el filtro no ve
+    usado = sum(int(r.get(k, 0)) for k in ("message.received", "message.echo", "whatsapp.account.update", "recuperacion_disparada")) + fijo
+    pct = 100.0 * usado / limite
+    print("cuota n8n estimada: %d de %d (%.0f %%); descartados en borde: %s" % (usado, limite, pct, r.get("bloqueado_en_borde", 0)))
+    if SIMULAR or pct < 70:
+        return
+    import datetime
+    if datetime.datetime.utcnow().hour != 7 and "--forzar-cuota" not in sys.argv:
+        return
+    txt = "Dalia: la cuota de n8n va por ~%d de %d ejecuciones este mes (%.0f %%, estimado por el filtro de borde)." % (usado, limite, pct)
+    try:
+        enviar_correo(AV["SMTP_USER"], "Dalia: cuota n8n al %.0f %%" % pct, txt)
+        if pct >= 90 and AV.get("MARIA_SMS"):
+            enviar_sms(AV["MARIA_SMS"], txt)
+    except Exception as e:
+        err("aviso cuota", e)
+
+
 def ping(sufijo=""):
     """Latido hacia el servicio independiente que avisa si el vigilante deja de ejecutarse (dead-man)."""
     url = AV.get("HC_PING_URL")
@@ -169,6 +196,7 @@ def ping(sufijo=""):
 if __name__ == "__main__":
     try:
         main()
+        cuota()
         ping()
     except Exception:
         ping("/fail")
