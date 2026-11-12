@@ -183,6 +183,26 @@ def cuota():
         err("aviso cuota", e)
 
 
+def latido_cron():
+    """El cron del Worker de Cloudflare que recupera citas atascadas deja un latido en Neon. Si lleva >30 min parado
+    (o nunca ha latido), avisa por correo en el pase de las 07 UTC. No depende de n8n."""
+    try:
+        seg = sql("select %s.borde_latido_cron_lab() as s" % ESQ)[0]["s"]
+    except Exception as e:
+        err("latido cron", e)
+        return
+    print("latido del cron de recuperacion: hace %s s" % ("nunca" if seg is None or seg < 0 else seg))
+    if SIMULAR or (seg is not None and 0 <= seg <= 1800):
+        return
+    import datetime
+    if datetime.datetime.utcnow().hour != 7 and "--forzar-cuota" not in sys.argv:
+        return
+    try:
+        enviar_correo(AV["SMTP_USER"], "Dalia: el cron de recuperacion de citas no late", "El cron de Cloudflare que recupera citas atascadas no ha latido en los ultimos 30 minutos (o nunca). La recuperacion diaria de n8n sigue como respaldo.")
+    except Exception as e:
+        err("aviso latido", e)
+
+
 def ping(sufijo=""):
     """Latido hacia el servicio independiente que avisa si el vigilante deja de ejecutarse (dead-man)."""
     url = AV.get("HC_PING_URL")
@@ -197,6 +217,7 @@ if __name__ == "__main__":
     try:
         main()
         cuota()
+        latido_cron()
         ping()
     except Exception:
         ping("/fail")
